@@ -61,7 +61,7 @@ def page_sprint(oled, sprint):
     oled.show()
 
 def page_backlog(oled, backlog):
-    draw_header(oled, "BACKLOG")
+    draw_header(oled, "BACKLOG GRL")
     todo = backlog.get("todo", 0)
     wip  = backlog.get("in_progress", 0)
     done = backlog.get("done", 0)

@@ -23,7 +23,7 @@ def draw_header(oled, title):
 
 def show_connecting(oled):
     oled.fill(0)
-    oled.text("Conectando WiFi", 0, 24)
+    oled.text("Conectando Wi-Fi", 0, 24)
     oled.text("  ArchiTechIA  ", 0, 40)
     oled.show()
 
@@ -74,10 +74,10 @@ def page_backlog(oled, backlog):
     oled.show()
 
 def page_epics(oled, epics):
-    draw_header(oled, "EPICAS")
+    draw_header(oled, "EPICS")
     active = epics.get("active", 0)
     oled.text(str(active), 52, 28)
-    oled.text("activas", 40, 42)
+    oled.text("ACTIVAS", 40, 42)
     oled.show()
 
 def page_status(oled, ts, version):

@@ -20,7 +20,7 @@ def draw_header(oled, title):
 def show_connecting(oled):
     oled.fill(0)
     oled.text("Conectando WiFi", 0, 24)
-    oled.text("  Orion v1.0  ", 0, 40)
+    oled.text("  ArchiTechIA  ", 0, 40)
     oled.show()
 
 def show_error(oled, msg):

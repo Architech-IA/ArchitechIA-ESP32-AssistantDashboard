@@ -2,9 +2,13 @@ import network
 import urequests
 import ujson
 import time
-from machine import SoftI2C, Pin
+from machine import SoftI2C, Pin, reset
 from sh1106 import SH1106
 import config
+
+OTA_VERSION_URL = "https://raw.githubusercontent.com/Architech-IA/ArchitechIA-ESP32-AssistantDashboard/main/version.txt"
+OTA_BASE_URL    = "https://raw.githubusercontent.com/Architech-IA/ArchitechIA-ESP32-AssistantDashboard/main/"
+OTA_FILES       = ["main.py", "sh1106.py"]
 
 def center(text, width=16):
     return text[:width].center(width)
@@ -29,6 +33,13 @@ def show_error(oled, msg):
     oled.hline(0, 10, 128)
     oled.text(trunc(msg, 16), 0, 20)
     oled.text(trunc(msg[16:], 16), 0, 32)
+    oled.show()
+
+def show_ota(oled, msg):
+    oled.fill(0)
+    oled.text("OTA Update", 24, 0)
+    oled.hline(0, 10, 124)
+    oled.text(msg, 0, 28)
     oled.show()
 
 def page_sprint(oled, sprint):
@@ -69,8 +80,8 @@ def page_epics(oled, epics):
     oled.text("activas", 40, 42)
     oled.show()
 
-def page_status(oled, ts):
-    draw_header(oled, "ORION v1.0")
+def page_status(oled, ts, version):
+    draw_header(oled, "ORION v" + version)
     t = ts[11:16] if len(ts) >= 16 else "--:--"
     d = ts[:10]   if len(ts) >= 10 else "----"
     oled.text("Update: " + t, 0, 16)
@@ -110,6 +121,43 @@ def fetch_metrics():
         print("fetch error:", e)
     return None
 
+def get_local_version():
+    try:
+        with open("version.txt") as f:
+            return f.read().strip()
+    except Exception:
+        return "0.0.0"
+
+def check_ota(oled):
+    try:
+        r = urequests.get(OTA_VERSION_URL, timeout=10)
+        remote = r.text.strip()
+        r.close()
+        if remote == get_local_version():
+            return
+        show_ota(oled, "v" + remote + " disponible")
+        time.sleep(1)
+        for fname in OTA_FILES:
+            show_ota(oled, "Bajando " + fname)
+            r = urequests.get(OTA_BASE_URL + fname, timeout=20)
+            with open(fname + ".tmp", "w") as f:
+                f.write(r.text)
+            r.close()
+        import os
+        for fname in OTA_FILES:
+            try:
+                os.remove(fname)
+            except Exception:
+                pass
+            os.rename(fname + ".tmp", fname)
+        with open("version.txt", "w") as f:
+            f.write(remote)
+        show_ota(oled, "Reiniciando...")
+        time.sleep(2)
+        reset()
+    except Exception as e:
+        print("OTA error:", e)
+
 def run():
     i2c  = SoftI2C(scl=Pin(config.I2C_SCL), sda=Pin(config.I2C_SDA), freq=400000)
     oled = SH1106(i2c, addr=config.OLED_ADDR)
@@ -119,13 +167,19 @@ def run():
         if not connect_wifi(oled):
             return
 
+    version    = get_local_version()
     data       = None
     last_fetch = 0
+    last_ota   = 0
     page_idx   = 0
     last_page  = 0
 
     while True:
         now = time.time()
+
+        if (now - last_ota) >= config.OTA_INTERVAL:
+            check_ota(oled)
+            last_ota = now
 
         if data is None or (now - last_fetch) >= config.POLL_INTERVAL:
             new_data = fetch_metrics()
@@ -156,7 +210,7 @@ def run():
                 elif kind == "epics":
                     page_epics(oled, payload)
                 elif kind == "status":
-                    page_status(oled, payload)
+                    page_status(oled, payload, version)
                 page_idx += 1
 
             last_page = now

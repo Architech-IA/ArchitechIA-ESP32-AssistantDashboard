@@ -81,7 +81,7 @@ def page_epics(oled, epics):
     oled.show()
 
 def page_status(oled, ts, version):
-    draw_header(oled, "ORION v" + version)
+    draw_header(oled, "ArchiTechIA v" + version)
     t = ts[11:16] if len(ts) >= 16 else "--:--"
     d = ts[:10]   if len(ts) >= 10 else "----"
     oled.text("Update: " + t, 0, 16)
